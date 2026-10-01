@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>SamAlive 調色解析</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;900&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a darkroom contact sheet — one narrow reading column, wide "panels" that borrow Lightroom's slider readouts. Dark-first, because the style itself is low-key. */
+:root{
+  --bg:#15130f; --surface:#1f1b16; --sunk:#100e0b; --fg:#ede5d9; --muted:#a3988a; --line:#382f27;
+  --amber:#e39a5c; --teal:#57a9aa; --good:#8fbf7a; --warn:#e0b04a; --bad:#e07a6a;
+  --f-display:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#eceeed; --surface:#fbfcfb; --sunk:#e1e5e3; --fg:#1c1e1d; --muted:#59605d; --line:#cdd3d0;
+  --amber:#b2622a; --teal:#28797b; --good:#3f7f2c; --warn:#94690c; --bad:#b0412f; color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#eceeed; --surface:#fbfcfb; --sunk:#e1e5e3; --fg:#1c1e1d; --muted:#59605d; --line:#cdd3d0;
+  --amber:#b2622a; --teal:#28797b; --good:#3f7f2c; --warn:#94690c; --bad:#b0412f; color-scheme:light}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.75 var(--f-body);padding-inline:16px;padding-block:0 64px}
+.wrap{max-width:980px;margin:0 auto}
+.col{max-width:680px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.25;margin:0}
+h2{font-size:clamp(1.6rem,4vw,2.1rem);font-weight:900}
+h3{font-size:1.15rem;font-weight:600}
+p{margin:0}
+a{color:var(--teal)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.eyebrow{font:500 .75rem/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.ts{font:500 .78rem var(--f-mono);color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:3px;padding:1px 6px;white-space:nowrap}
+.ts:hover{color:var(--fg);border-color:var(--muted)}
+section{padding-block:72px 0;display:grid;gap:28px}
+.sec-head{display:grid;gap:10px}
+.lede{color:var(--muted)}
+
+/* hero */
+.hero{padding-block:56px 8px;display:grid;gap:22px}
+.hero h1{font-size:clamp(2.4rem,8vw,4.6rem);font-weight:900;letter-spacing:.01em}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--teal),var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tone-strip{height:64px;border-radius:2px;background:linear-gradient(90deg,#1f3d40 0%,#3c5552 22%,#7c7466 48%,#c49a73 72%,#ecc9a2 100%);position:relative}
+.tone-strip::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 11.1%,rgba(0,0,0,.18) 11.1% calc(11.1% + 1px))}
+.tone-legend{display:flex;justify-content:space-between;font:.75rem var(--f-mono);color:var(--muted);margin-top:6px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;color:var(--muted);font-size:.9rem}
+
+/* traits */
+.traits{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.trait{background:var(--bg);padding:22px;display:grid;gap:10px;align-content:start;min-width:0}
+.trait .tag{font:500 .72rem var(--f-mono);letter-spacing:.1em;color:var(--amber)}
+.trait p{color:var(--muted);font-size:.95rem}
+.trait .ts{justify-self:start}
+.trait.wide{grid-column:1/-1}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.sw{width:30px;height:30px;border-radius:50%;border:1px solid var(--line)}
+
+/* figures */
+.fig{background:var(--surface);border:1px solid var(--line);padding:20px;display:grid;gap:14px;min-width:0}
+.fig-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.fig svg{width:100%;height:auto;display:block}
+.cap{font-size:.85rem;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;flex-wrap:wrap}
+.seg button{font:500 .82rem var(--f-body);background:transparent;color:var(--muted);border:0;padding:6px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+
+/* steps */
+.steps{display:grid;gap:0;counter-reset:step;border-top:1px solid var(--line)}
+.step{display:grid;grid-template-columns:56px minmax(0,1fr);gap:4px 20px;padding-block:26px;border-bottom:1px solid var(--line)}
+.step::before{counter-increment:step;content:counter(step,decimal-leading-zero);font:500 1.05rem var(--f-mono);color:var(--amber);grid-row:span 3;padding-top:2px}
+.step-body{display:grid;gap:12px;min-width:0}
+.step-title{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline}
+.step p{color:var(--muted)}
+.step strong{color:var(--fg);font-weight:500}
+.panel{background:var(--sunk);border:1px solid var(--line);border-radius:3px;padding:10px 14px;display:grid;gap:4px;font:.82rem var(--f-mono);max-width:420px}
+.panel .ph{color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-size:.7rem;margin-bottom:2px}
+.kv{display:flex;justify-content:space-between;gap:16px}
+.kv span:last-child{font-variant-numeric:tabular-nums}
+.up{color:var(--amber)} .down{color:var(--teal)}
+.tip{border-left:2px solid var(--teal);padding-left:14px;font-size:.92rem;color:var(--muted)}
+
+/* lab tool */
+.lab{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}
+@media (max-width:720px){.lab{grid-template-columns:minmax(0,1fr)}}
+.ctrl{display:grid;gap:14px}
+.ctrl label{display:grid;grid-template-columns:28px minmax(0,1fr) 52px;align-items:center;gap:10px;font:500 .9rem var(--f-mono)}
+.ctrl output{text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--amber)}
+.verdict{display:grid;grid-template-columns:72px minmax(0,1fr);gap:16px;align-items:center;padding:14px;border:1px solid var(--line);background:var(--sunk)}
+.chip-swatch{width:72px;height:72px;border-radius:3px;border:1px solid var(--line)}
+.verdict b{font-family:var(--f-display);font-size:1.15rem;display:block}
+.verdict small{color:var(--muted);font-size:.85rem;display:block}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.presets button{font:.8rem var(--f-body);background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:3px;padding:5px 10px;cursor:pointer}
+.presets button:hover{border-color:var(--muted)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem;min-width:460px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+th{font:500 .72rem var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+td.mono{white-space:nowrap}
+
+/* grading */
+canvas{width:100%;height:110px;display:block;border-radius:2px}
+.grade-ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 24px}
+.grade-ctrl label{display:grid;gap:4px;font-size:.88rem}
+.grade-ctrl .lbl{display:flex;justify-content:space-between;color:var(--muted)}
+
+/* summary */
+.recap{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}
+.recap div{border-top:2px solid var(--amber);padding-top:12px;display:grid;gap:6px}
+.recap p{color:var(--muted);font-size:.93rem}
+.quote{font-family:var(--f-display);font-size:1.25rem;line-height:1.7;max-width:640px}
+footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;display:grid;gap:6px}
+/* screenshot slots */
+.shot{position:relative;max-width:560px;display:grid;gap:6px}
+.shot-pick{position:relative;display:block;width:100%;aspect-ratio:16/9;max-width:100%;padding:0;border:1px dashed var(--muted);border-radius:3px;background:var(--sunk);color:var(--muted);font:inherit;cursor:pointer;overflow:hidden}
+.shot-pick:hover,.shot.drag .shot-pick{border-color:var(--amber);color:var(--amber)}
+.shot-pick:disabled{cursor:default;border-color:var(--line);color:var(--muted)}
+.shot-pick img{width:100%;height:100%;object-fit:contain;display:block}
+.shot-empty{display:grid;place-content:center;justify-items:center;gap:2px;height:100%;padding:8px;text-align:center}
+.shot-empty b{font-weight:500;font-size:.9rem}
+.shot-empty small{font:.72rem var(--f-mono);letter-spacing:.04em}
+.shot-hint{position:absolute;inset:auto 0 0 0;padding:6px 10px;font-size:.78rem;background:var(--bg);color:var(--fg);opacity:0;transition:opacity .15s;text-align:left}
+.shot.has-img .shot-pick{border-style:solid;border-color:var(--line)}
+.shot.has-img .shot-pick:not(:disabled):hover .shot-hint,.shot.has-img .shot-pick:focus-visible .shot-hint{opacity:.92}
+.shot-del{position:absolute;top:8px;right:8px;font:500 .75rem var(--f-body);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:3px;padding:3px 9px;cursor:pointer;opacity:.9}
+.shot-del.confirm{background:var(--bad);border-color:var(--bad);color:var(--bg)}
+.shot-status{font-size:.78rem;color:var(--muted)}
+.shot-status.err{color:var(--bad)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="eyebrow">人像調色 · Camera Raw / Lightroom</span>
+  <h1>SamAlive<br><em>調色解析</em></h1>
+  <p class="col lede">把 SamAlive 的七個風格特點拆開來看，再用一張素材從白平衡一路調到導出。重點是 Lab 精準調色法：用數值檢查膚色的亮度、色相和飽和度，不再只靠肉眼。</p>
+  <div>
+    <div class="tone-strip" role="img" aria-label="低長調色階示意：青色陰影、黑色缺失，往橙色高光過渡"></div>
+    <div class="tone-legend"><span>陰影 · 偏青 · 黑色缺失</span><span>中間調</span><span>高光 · 偏橙</span></div>
+  </div>
+  <div class="meta">
+    <span>原影片：JustYøu</span>
+    <a href="https://www.youtube.com/watch?v=MW_fqTK-eow" target="_blank" rel="noopener">在 YouTube 觀看 ↗</a>
+    <a href="lab/" target="_blank" rel="noopener">打開調色實驗器 ↗</a>
+    <span class="mono">約 15 分鐘</span>
+  </div>
+</header>
+
+<!-- ============ TRAITS ============ -->
+<section id="traits">
+  <div class="sec-head col">
+    <span class="eyebrow">第一部分</span>
+    <h2>七個風格特點</h2>
+    <p class="lede">先學會「看」。這七點是之後每一個調整步驟的依據。</p>
+  </div>
+
+  <div class="traits">
+    <article class="trait">
+      <span class="tag">影調</span>
+      <h3>低長調</h3>
+      <p>整體偏暗，比高調更穩重、帶點神秘感。高長調適合輕鬆明快的氛圍，低長調剛好相反，依你想傳達的情緒來選。</p>
+      <a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=58s" target="_blank" rel="noopener">00:58</a>
+    </article>
+    <article class="trait">
+      <span class="tag">對比</span>
+      <h3>明暗對比無處不在</h3>
+      <p>明亮的臉配深色頭髮或深色衣服，把人物推出來。大部分作品都有加對比度，可以從直方圖判斷（見下方圖）。</p>
+      <a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=82s" target="_blank" rel="noopener">01:22</a>
+    </article>
+    <article class="trait">
+      <span class="tag">主體</span>
+      <h3>主角明確，膚色亮而淡</h3>
+      <p>臉部非常明亮，膚色亮度 <span class="mono">L ≥ 80</span>，飽和度很低。後面會教你怎麼用 Lab 數值邊調邊檢查。</p>
+      <a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=127s" target="_blank" rel="noopener">02:07</a>
+    </article>
+    <article class="trait">
+      <span class="tag">配色</span>
+      <h3>互補色：青橙對比</h3>
+      <p>橙配青、紅配綠。可以是高飽和橙配低飽和青，也可以反過來。很多風格的差異，其實只是橙與青的明度、飽和度組合不同。</p>
+      <div class="swatches" aria-hidden="true">
+        <span class="sw" style="background:#d98a45"></span><span class="sw" style="background:#7fa6a3"></span>
+        <span class="sw" style="background:#b79a82"></span><span class="sw" style="background:#2e8a8c"></span>
+      </div>
+      <a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=149s" target="_blank" rel="noopener">02:29</a>
+    </article>
+    <article class="trait">
+      <span class="tag">色溫</span>
+      <h3>暖調居多</h3>
+      <p>雖然是冷暖對比，但畫面裡暖色多於冷色。看不出來時看直方圖：亮部與中間調有較多紅色和黃色，就是暖調。</p>
+      <a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=184s" target="_blank" rel="noopener">03:04</a>
+    </article>
+    <article class="trait">
+      <span class="tag">服裝</span>
+      <h3>衣著多為中性色</h3>
+      <p>黑、白、灰、棕、米色。中性色是調和色，能平衡畫面裡的多個顏色，讓青橙對比不被干擾。</p>
+      <div class="swatches" aria-hidden="true">
+        <span class="sw" style="background:#1d1d1d"></span><span class="sw" style="background:#8a8a8a"></span>
+        <span class="sw" style="background:#eeeeea"></span><span class="sw" style="background:#6b4f3a"></span><span class="sw" style="background:#d8c8ae"></span>
+      </div>
+      <a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=211s" target="_blank" rel="noopener">03:31</a>
+    </article>
+    <article class="trait wide">
+      <span class="tag">質感</span>
+      <h3>膠片感：黑色缺失</h3>
+      <p>所有作品都看不到純黑，有些連純白也沒有。做法很簡單：把曲線的端點往內收，讓尾部上翹。</p>
+      <a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=227s" target="_blank" rel="noopener">03:47</a>
+    </article>
+  </div>
+
+  <div class="fig-row">
+    <figure class="fig" style="margin:0">
+      <div class="eyebrow">直方圖 · 對比度判讀</div>
+      <svg id="histo" viewBox="0 0 320 150" role="img" aria-label="低對比與高對比的直方圖比較"></svg>
+      <figcaption class="cap">對比弱：中間波峰<span style="color:var(--muted)">又高又尖</span>。對比強：<span style="color:var(--amber)">波峰變矮、往兩端攤平</span>。把對比度想成橡皮筋，兩端一拉，中間就變細。</figcaption>
+    </figure>
+    <figure class="fig" style="margin:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="eyebrow">曲線 · 膠片感</span>
+        <div class="seg" role="group" aria-label="曲線模式">
+          <button type="button" data-mode="0" aria-pressed="false">原始</button>
+          <button type="button" data-mode="1" aria-pressed="true">黑色缺失</button>
+          <button type="button" data-mode="2" aria-pressed="false">黑白皆缺失</button>
+        </div>
+      </div>
+      <svg id="curve" viewBox="0 0 320 190" role="img" aria-label="色調曲線示意"></svg>
+      <figcaption class="cap" id="curveCap"></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ WORKFLOW ============ -->
+<section id="workflow">
+  <div class="sec-head col">
+    <span class="eyebrow">第二部分</span>
+    <h2>實作：八個步驟調出來</h2>
+    <p class="lede">素材的問題：主角的臉完全在陰影裡，最亮的地方反而是袖子；直方圖亮部不多、黑色溢出。原則是<strong style="color:var(--fg)">主角在哪，光就打哪</strong>。建議開啟原圖／效果圖對比模式，方便看前後差異。</p>
+  </div>
+
+  <ol class="steps" style="list-style:none;padding:0;margin:0">
+    <li class="step"><div class="step-body">
+      <div class="step-title"><h3>白平衡與整體曝光</h3><a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=276s" target="_blank" rel="noopener">04:36</a></div>
+      <p>用<strong>白平衡吸管</strong>點畫面中的白色，讓軟件自動校正。原圖偏暖，校正後恢復正常，而且陰影帶點青色，這正是後面要的效果。接著重塑光線：</p>
+      <div class="panel">
+        <span class="ph">基本 Basic</span>
+        <div class="kv"><span>陰影 Shadows</span><span class="up">＋ 提亮，救回溢出的黑</span></div>
+        <div class="kv"><span>高光 Highlights</span><span class="down">−100</span></div>
+        <div class="kv"><span>黑色 Blacks</span><span class="up">＋ 顯出暗部細節</span></div>
+        <div class="kv"><span>白色 Whites</span><span class="up">＋ 少量</span></div>
+        <div class="kv"><span>對比度 Contrast</span><span class="up">＋ 壓平中間波峰</span></div>
+      </div>
+    </div></li>
+
+    <li class="step"><div class="step-body">
+      <div class="step-title"><h3>用 Lab 精準提亮膚色</h3><a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=337s" target="_blank" rel="noopener">05:37</a></div>
+      <p>人眼會先找畫面最亮的地方，所以要照亮主體。滑鼠移過畫面時，直方圖下方會顯示 <strong>L a b</strong> 數值；L 是亮度，<span class="mono">0–100</span>。沒看到的話，在直方圖上按右鍵，勾選<strong>顯示 Lab 色彩值</strong>。按 <span class="mono">S</span> 使用<strong>顏色取樣器</strong>，可以在畫面上固定取樣點。</p>
+      <p>素材臉部 <span class="mono">L = 50</span>，太暗；SamAlive 的膚色通常在 80 以上。用<strong>筆刷</strong>（調小尺寸、降低流量）塗出陰影中的臉和手臂：</p>
+      <div class="panel">
+        <span class="ph">筆刷 Brush · 臉部與手臂</span>
+        <div class="kv"><span>曝光 / 陰影 / 白色 / 高光</span><span class="up">＋</span></div>
+        <div class="kv"><span>紋理 Texture</span><span class="down">−</span></div>
+        <div class="kv"><span>清晰度 Clarity</span><span class="down">−13</span></div>
+        <div class="kv"><span>結果</span><span>L 50 → <b class="up">85</b></span></div>
+      </div>
+      <p class="tip">清晰度降太多會變糊，柔膚到 −13 就夠。</p>
+    </div></li>
+
+    <li class="step"><div class="step-body">
+      <div class="step-title"><h3>用 a、b 值檢查膚色色相</h3><a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=454s" target="_blank" rel="noopener">07:34</a></div>
+      <p>素材膚色 <span class="mono">a = 15、b = 9</span>：都是正數，但 a 比 b 大很多，代表<strong>偏紅</strong>。增加色溫，直到 <span class="mono">a = b = 9</span>，膚色正確且飽和度低，這是亮白膚色的參考值。完整規則與檢查器在<a href="#lab">第三部分</a>。</p>
+    </div></li>
+
+    <li class="step"><div class="step-body">
+      <div class="step-title"><h3>頭髮層次，與背景分開</h3><a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=582s" target="_blank" rel="noopener">09:42</a></div>
+      <p>頭髮、植物、窗內陰影全混在一起。SamAlive 的人物頭髮多為深色，但會留一點高光，避免變成一團不透氣的黑。把筆刷調小，沿用剛才的曝光設定，<strong>描出頭髮的高光</strong>，人物就和其他暗部分開了。</p>
+    </div></li>
+
+    <li class="step"><div class="step-body">
+      <div class="step-title"><h3>曲線做膠片感</h3><a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=621s" target="_blank" rel="noopener">10:21</a></div>
+      <p>在曲線裡把<strong>黑點往上拉</strong>，黑色缺失；也可以同時把白點往下壓。亮度被壓縮在一段範圍內，畫面沒有純黑純白，這就是常說的<strong>迷幻黑、迷幻白</strong>。到這裡，低長調、強對比、黑色缺失三點都到位了。</p>
+    </div></li>
+
+    <li class="step"><div class="step-body">
+      <div class="step-title"><h3>混色器：衣服改中性色，建立青橙</h3><a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=649s" target="_blank" rel="noopener">10:49</a></div>
+      <p>衣服是紫紅色，會破壞青橙調。在<strong>混色器</strong>把它的色相推向藍，再降飽和度；口紅太鮮豔，就降紅色飽和度。衣服上去不掉的色塊，用筆刷塗出來，<span class="mono">飽和度 −100</span>。失去明確色相後，衣服就成了中性色。</p>
+      <p>膚色與桌子已經在橙色範圍，白平衡後陰影也已經偏青，只要把<strong>藍色色相往青色稍微推</strong>，橙青對比就成形了。</p>
+    </div></li>
+
+    <li class="step"><div class="step-body">
+      <div class="step-title"><h3>顏色分級統一色調</h3><a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=711s" target="_blank" rel="noopener">11:51</a></div>
+      <div class="panel">
+        <span class="ph">顏色分級 Color Grading</span>
+        <div class="kv"><span>高光 Highlights</span><span class="up">橙黃</span></div>
+        <div class="kv"><span>陰影 Shadows</span><span class="down">青 · 只加一點</span></div>
+        <div class="kv"><span>中間調 Midtones</span><span>反向平衡</span></div>
+      </div>
+      <p>中間調很多人不知道怎麼調。人物通常落在中間調：高光加了暖、陰影加了冷之後，如果人物看起來太冷，中間調就<strong>加暖</strong>；太暖就加冷。這張素材加的是暖色。可以在<a href="#grade">第四部分</a>的灰階條上試。</p>
+    </div></li>
+
+    <li class="step"><div class="step-body">
+      <div class="step-title"><h3>空間感、銳化、暈影與顆粒</h3><a class="ts" href="https://www.youtube.com/watch?v=MW_fqTK-eow&t=759s" target="_blank" rel="noopener">12:39</a></div>
+      <p>有一塊暗部缺少層次，用<strong>漸層濾鏡</strong>順著光的方向加曝光，再<strong>降低去除薄霧</strong>，讓那裡變朦朧。背景更虛，前景更清楚，空間感就出來了。</p>
+      <div class="panel">
+        <span class="ph">細節與效果</span>
+        <div class="kv"><span>銳化 Sharpening</span><span class="up">130</span></div>
+        <div class="kv"><span>遮色片 Masking</span><span>按住 Alt 拖曳，只銳化大輪廓</span></div>
+        <div class="kv"><span>暈影 Vignette</span><span class="down">− 壓暗四周</span></div>
+        <div class="kv"><span>顆粒 Grain</span><span class="up">＋ 加強膠片感</span></div>
+      </div>
+    </div></li>
+  </ol>
+
+  <div class="fig" style="max-width:680px">
+    <div class="eyebrow">導出設定 · Ctrl + S</div>
+    <div class="tbl-wrap"><table>
+      <tr><th>項目</th><th>設定</th><th>說明</th></tr>
+      <tr><td>格式</td><td class="mono">JPEG</td><td>網路平台、手機電腦觀看都適用</td></tr>
+      <tr><td>品質</td><td>高</td><td>發社群就夠；影片示範做 4K 影片素材，選最佳</td></tr>
+      <tr><td>色彩空間</td><td class="mono">sRGB</td><td>一定要選，否則上網後顏色會跑掉</td></tr>
+      <tr><td>解析度</td><td class="mono">72 ppi</td><td>網頁用途足夠</td></tr>
+    </table></div>
+  </div>
+</section>
+
+<!-- ============ LAB ============ -->
+<section id="lab">
+  <div class="sec-head col">
+    <span class="eyebrow">第三部分 · Lab 精準調色法</span>
+    <h2>膚色檢查器</h2>
+    <p class="lede">不管黃皮膚、白皮膚、黑皮膚，正確膚色都落在同一條色相線上，差別只在亮度與飽和度。判斷只要兩個條件：<strong style="color:var(--fg)">a、b 都是正數</strong>，而且<strong style="color:var(--fg)">a ≈ b</strong>。</p>
+  </div>
+
+  <div class="fig lab">
+    <div class="ctrl">
+      <label for="inL">L<input id="inL" type="range" min="0" max="100" value="50"><output id="oL" class="mono">50</output></label>
+      <label for="inA">a<input id="inA" type="range" min="-40" max="50" value="15"><output id="oA" class="mono">15</output></label>
+      <label for="inB">b<input id="inB" type="range" min="-40" max="50" value="9"><output id="oB" class="mono">9</output></label>
+      <div class="verdict">
+        <div class="chip-swatch" id="swatch"></div>
+        <div><b id="vTitle"></b><small id="vText"></small></div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:8px">試試這些數值</div>
+        <div class="presets">
+          <button type="button" data-p="50,15,9">素材原始</button>
+          <button type="button" data-p="85,9,9">調整後</button>
+          <button type="button" data-p="86,10,10">白皮膚</button>
+          <button type="button" data-p="50,25,25">黑皮膚</button>
+          <button type="button" data-p="72,10,22">偏黃</button>
+          <button type="button" data-p="60,-14,-18">天空／冷色</button>
+        </div>
+      </div>
+    </div>
+    <div style="min-width:0">
+      <svg id="abPlane" viewBox="0 0 300 300" role="img" aria-label="a b 色彩平面，標出標準膚色線"></svg>
+      <p class="cap">a 軸：負為綠、正為紅。b 軸：負為藍、正為黃。虛線是 a = b 的標準膚色線，離原點越遠飽和度越高。</p>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <tr><th>情況</th><th>a、b 數值</th><th>亮度 L</th><th>意義</th></tr>
+      <tr><td>白皮膚</td><td class="mono">a ≈ b ≈ 10</td><td class="mono">80–90</td><td>飽和度低、亮度高</td></tr>
+      <tr><td>黑皮膚</td><td class="mono">a ≈ b ≈ 20–30</td><td class="mono">≈ 50</td><td>飽和度較高、亮度較低</td></tr>
+      <tr><td>偏紅</td><td class="mono">a &gt; b</td><td>—</td><td>增加色溫（往黃）把 b 拉上來</td></tr>
+      <tr><td>偏黃</td><td class="mono">b &gt; a</td><td>—</td><td>降低色溫，或往洋紅調色調</td></tr>
+      <tr><td>冷色</td><td class="mono">a、b 皆為負</td><td>—</td><td>用來檢查青色、藍色、天空、海水</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ GRADING ============ -->
+<section id="grade">
+  <div class="sec-head col">
+    <span class="eyebrow">第四部分 · 顏色分級</span>
+    <h2>在灰階上看懂三個色輪</h2>
+    <p class="lede">影片用一條灰階示範顏色分級：高光加橙、陰影加青之後，中間調負責平衡。拖動滑桿，看每一段亮度怎麼被染色。</p>
+  </div>
+  <div class="fig">
+    <canvas id="ramp" width="960" height="110" aria-label="套用顏色分級後的灰階條"></canvas>
+    <div class="tone-legend"><span>0 · 黑</span><span>陰影</span><span>中間調</span><span>高光</span><span>100 · 白</span></div>
+    <div class="grade-ctrl">
+      <label for="gH"><span class="lbl"><span>高光 · 橙黃</span><output id="ogH" class="mono">30</output></span><input id="gH" type="range" min="0" max="60" value="30"></label>
+      <label for="gS"><span class="lbl"><span>陰影 · 青</span><output id="ogS" class="mono">25</output></span><input id="gS" type="range" min="0" max="60" value="25"></label>
+      <label for="gM"><span class="lbl"><span>中間調 · 冷 ← → 暖</span><output id="ogM" class="mono">+10</output></span><input id="gM" type="range" min="-40" max="40" value="10"></label>
+      <label for="gK"><span class="lbl"><span>曲線 · 黑點提升</span><output id="ogK" class="mono">12</output></span><input id="gK" type="range" min="0" max="30" value="12"></label>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RECAP ============ -->
+<section id="recap">
+  <div class="sec-head col">
+    <span class="eyebrow">總結</span>
+    <h2>SamAlive 風格檢查清單</h2>
+  </div>
+  <div class="recap">
+    <div><h3>低長調、強對比</h3><p>整體偏暗，對比度拉高，直方圖中間波峰要平。</p></div>
+    <div><h3>主角明確</h3><p>膚色 <span class="mono">L ≥ 80</span>，<span class="mono">a ≈ b</span> 且數值低，飽和度淡。</p></div>
+    <div><h3>互補配色</h3><p>青橙對比；衣著改中性色，唇色收斂。</p></div>
+    <div><h3>膠片質感</h3><p>曲線黑點上翹做黑色缺失，再加顆粒與暈影。</p></div>
+  </div>
+  <p class="quote col">先清楚自己為什麼拍照，再不斷學習各種風格：留下喜歡的，剔除不喜歡的，反覆運用。風格會自己浮現，作品也就有了辨識度。</p>
+</section>
+
+<footer>
+  <span>內容整理自 JustYøu 頻道〈SamAlive 攝影調色全面解析〉，<a href="https://www.youtube.com/watch?v=MW_fqTK-eow" target="_blank" rel="noopener">youtube.com/watch?v=MW_fqTK-eow</a>。時間碼可直接跳到影片對應段落。</span>
+  <span>逐字稿為語音辨識，本頁已校正常見誤字（如 summer live → SamAlive、澄清 → 橙青、運營 → 暈影）。Lab 色塊為 D65 近似換算，僅供示意。</span>
+  <span>截圖：把圖檔放在 screenshots/ 資料夾，檔名用影片秒數，例如 00:58 → shot-58.jpg（也可用 .png、.webp），就會自動顯示。點擊欄位可以先暫時預覽。</span>
+</footer>
+<input id="shotFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+</div>
+
+<script>
+(function(){
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+
+  /* ---------- histogram ---------- */
+  function drawHisto(){
+    const svg = document.getElementById("histo"); svg.innerHTML = "";
+    const W = 320, H = 150, base = 128, x0 = 10, x1 = 310;
+    el("line",{x1:x0,y1:base,x2:x1,y2:base,stroke:css("--line")},svg);
+    const path = (fn) => { let d = ""; for (let i = 0; i <= 100; i++){ const t = i/100; const x = x0 + t*(x1-x0); const y = base - fn(t); d += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1); } return d + `L${x1} ${base}L${x0} ${base}Z`; };
+    const g = (t, m, s) => Math.exp(-((t-m)**2)/(2*s*s));
+    el("path",{d:path(t => 105*g(t,.5,.09)),fill:css("--muted"),"fill-opacity":.18,stroke:css("--muted"),"stroke-width":1.5},svg);
+    el("path",{d:path(t => 44*(g(t,.5,.24)) + 12*g(t,.15,.08) + 14*g(t,.85,.08)),fill:css("--amber"),"fill-opacity":.22,stroke:css("--amber"),"stroke-width":1.5},svg);
+    const lbl = (x,y,txt,c) => { const t = el("text",{x,y,fill:c,"font-size":11,"font-family":css("--f-body"),"text-anchor":"middle"},svg); t.textContent = txt; };
+    lbl(160,18,"低對比：中間尖峰",css("--muted"));
+    lbl(160,146,"暗 ←                    → 亮",css("--muted"));
+    lbl(258,82,"高對比：攤平",css("--amber"));
+  }
+
+  /* ---------- curve ---------- */
+  const curveCaps = [
+    "原始曲線：黑點在 0、白點在 255，有純黑純白。",
+    "黑點往上拉：最暗處變成灰黑，畫面沒有純黑，就是膠片的「迷幻黑」。",
+    "黑點上拉、白點下壓：亮度被壓在一段範圍內，黑白都缺失。"
+  ];
+  let curveMode = 1;
+  function drawCurve(){
+    const svg = document.getElementById("curve"); svg.innerHTML = "";
+    const L = 40, T = 10, S = 140;
+    const lift = [0,.18,.16][curveMode], top = [1,1,.9][curveMode];
+    for (let i = 0; i <= 4; i++){ const p = i*S/4;
+      el("line",{x1:L+p,y1:T,x2:L+p,y2:T+S,stroke:css("--line")},svg);
+      el("line",{x1:L,y1:T+p,x2:L+S,y2:T+p,stroke:css("--line")},svg); }
+    el("line",{x1:L,y1:T+S,x2:L+S,y2:T,stroke:css("--muted"),"stroke-dasharray":"3 4"},svg);
+    const f = x => { const s = x + .12*Math.sin(2*Math.PI*x)*-0.5*(curveMode?1:0); return lift + (top-lift)*Math.min(1,Math.max(0,s)); };
+    let d = "";
+    for (let i = 0; i <= 60; i++){ const x = i/60; d += (i?"L":"M") + (L+x*S).toFixed(1) + " " + (T+S-f(x)*S).toFixed(1); }
+    el("path",{d,fill:"none",stroke:css("--amber"),"stroke-width":2.5},svg);
+    el("circle",{cx:L,cy:T+S-f(0)*S,r:5,fill:css("--bg"),stroke:css("--amber"),"stroke-width":2},svg);
+    el("circle",{cx:L+S,cy:T+S-f(1)*S,r:5,fill:css("--bg"),stroke:css("--amber"),"stroke-width":2},svg);
+    // output tone bar
+    const defs = el("defs",{},svg), grad = el("linearGradient",{id:"cg",x1:0,x2:1,y1:0,y2:0},defs);
+    for (let i = 0; i <= 10; i++){ const v = Math.round(f(i/10)*255); el("stop",{offset:i/10,"stop-color":`rgb(${v},${v},${v})`},grad); }
+    const vg = el("linearGradient",{id:"vg",x1:0,x2:0,y1:1,y2:0},defs);
+    for (let i = 0; i <= 10; i++){ const v = Math.round(f(i/10)*255); el("stop",{offset:i/10,"stop-color":`rgb(${v},${v},${v})`},vg); }
+    el("rect",{x:L+S+22,y:T,width:18,height:S,fill:"url(#vg)"},svg);
+    el("rect",{x:L,y:T+S+14,width:S,height:12,fill:"url(#cg)"},svg);
+    const t = (x,y,s,a) => { const e = el("text",{x,y,fill:css("--muted"),"font-size":10,"font-family":css("--f-mono"),"text-anchor":a||"start"},svg); e.textContent = s; };
+    t(L+S+31,T+S+24,"輸出","middle"); t(L+S/2,T+S+40,"輸入色階","middle");
+    t(L-6,T+S-f(0)*S+4,Math.round(f(0)*255),"end"); t(L-6,T+S-f(1)*S+4,Math.round(f(1)*255),"end");
+    document.getElementById("curveCap").textContent = curveCaps[curveMode];
+    document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.mode === curveMode)));
+  }
+  document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { curveMode = +b.dataset.mode; drawCurve(); }));
+
+  /* ---------- Lab ---------- */
+  function lab2rgb(L,a,b){
+    let y = (L+16)/116, x = a/500 + y, z = y - b/200;
+    const f = t => t**3 > 0.008856 ? t**3 : (t - 16/116)/7.787;
+    x = 0.95047*f(x); y = 1.0*f(y); z = 1.08883*f(z);
+    let r = x*3.2406 + y*-1.5372 + z*-0.4986, g = x*-0.9689 + y*1.8758 + z*0.0415, bl = x*0.0557 + y*-0.2040 + z*1.0570;
+    const c = v => Math.round(255*Math.min(1,Math.max(0, v > 0.0031308 ? 1.055*v**(1/2.4) - 0.055 : 12.92*v)));
+    return `rgb(${c(r)},${c(g)},${c(bl)})`;
+  }
+  const inL = document.getElementById("inL"), inA = document.getElementById("inA"), inB = document.getElementById("inB");
+  function judge(L,a,b){
+    if (a < 0 && b < 0) return ["good","冷色","a、b 皆為負數，是青、藍這類冷色。用來確認天空、海水或陰影的青色。"];
+    if (a <= 0 || b <= 0) return ["bad","不是膚色範圍","膚色的 a、b 都必須是正數。偏綠（a 負）或偏藍（b 負）都要先修正白平衡。"];
+    const diff = a - b, tol = Math.max(2, 0.2*Math.max(a,b));
+    let hue;
+    if (Math.abs(diff) <= tol) hue = ["good","色相正確","a ≈ b，落在標準膚色線上。"];
+    else if (diff > 0) hue = ["warn","偏紅","a 大於 b。增加色溫把 b 拉上來，直到兩者相等。"];
+    else hue = ["warn","偏黃","b 大於 a。降低色溫，或把色調往洋紅推。"];
+    const sat = (a+b)/2;
+    const satTxt = sat <= 12 ? "飽和度低" : sat <= 20 ? "飽和度中等" : "飽和度偏高";
+    const lTxt = L >= 80 ? "亮度達到 SamAlive 的 80 以上。" : `亮度 ${L}，SamAlive 風格要提到 80 以上。`;
+    return [hue[0], hue[1], `${hue[2]} ${satTxt}；${lTxt}`];
+  }
+  function drawPlane(a,b){
+    const svg = document.getElementById("abPlane"); svg.innerHTML = "";
+    const C = 150, k = 2.6; // 1 unit = 2.6px, range ±55
+    el("rect",{x:0,y:0,width:300,height:300,fill:css("--sunk")},svg);
+    for (let v = -50; v <= 50; v += 10){ el("line",{x1:C+v*k,y1:8,x2:C+v*k,y2:292,stroke:css("--line"),"stroke-width":v===0?1.5:.6},svg); el("line",{x1:8,y1:C-v*k,x2:292,y2:C-v*k,stroke:css("--line"),"stroke-width":v===0?1.5:.6},svg); }
+    // hue ring
+    for (let i = 0; i < 72; i++){ const ang = i/72*2*Math.PI, r = 132; const aa = Math.cos(ang)*45, bb = Math.sin(ang)*45;
+      el("circle",{cx:C+Math.cos(ang)*r,cy:C-Math.sin(ang)*r,r:5,fill:lab2rgb(65,aa,bb)},svg); }
+    el("line",{x1:C,y1:C,x2:C+52*k,y2:C-52*k,stroke:css("--amber"),"stroke-width":1.5,"stroke-dasharray":"5 4"},svg);
+    // skin refs
+    [[10,"白"],[25,"黑"]].forEach(([v,n]) => { el("circle",{cx:C+v*k,cy:C-v*k,r:4,fill:"none",stroke:css("--muted"),"stroke-width":1.5},svg);
+      const t = el("text",{x:C+v*k+8,y:C-v*k+14,fill:css("--muted"),"font-size":10,"font-family":css("--f-body")},svg); t.textContent = n + "皮膚"; });
+    const tx = (x,y,s,anc) => { const t = el("text",{x,y,fill:css("--muted"),"font-size":11,"font-family":css("--f-mono"),"text-anchor":anc},svg); t.textContent = s; };
+    tx(286,C-6,"+a 紅","end"); tx(14,C-6,"−a 綠","start"); tx(C+6,22,"+b 黃","start"); tx(C+6,286,"−b 藍","start");
+    el("circle",{cx:C+a*k,cy:C-b*k,r:8,fill:lab2rgb(+inL.value,a,b),stroke:css("--fg"),"stroke-width":2.5},svg);
+  }
+  function updateLab(){
+    const L = +inL.value, a = +inA.value, b = +inB.value;
+    document.getElementById("oL").textContent = L; document.getElementById("oA").textContent = a; document.getElementById("oB").textContent = b;
+    document.getElementById("swatch").style.background = lab2rgb(L,a,b);
+    const [lvl, title, text] = judge(L,a,b);
+    const vt = document.getElementById("vTitle"); vt.textContent = title; vt.style.color = css("--" + lvl);
+    document.getElementById("vText").textContent = text;
+    drawPlane(a,b);
+  }
+  [inL,inA,inB].forEach(i => i.addEventListener("input", updateLab));
+  document.querySelectorAll(".presets button").forEach(btn => btn.addEventListener("click", () => {
+    const [L,a,b] = btn.dataset.p.split(",").map(Number); inL.value = L; inA.value = a; inB.value = b; updateLab(); }));
+
+  /* ---------- grading ramp ---------- */
+  const gH = document.getElementById("gH"), gS = document.getElementById("gS"), gM = document.getElementById("gM"), gK = document.getElementById("gK");
+  const ORANGE = [1, .62, .25], TEAL = [.15, .62, .66], WARM = [1, .7, .4], COOL = [.3, .6, 1];
+  function drawRamp(){
+    const cv = document.getElementById("ramp"), ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+    const h = gH.value/100, s = gS.value/100, m = gM.value/100, lift = gK.value/100;
+    document.getElementById("ogH").textContent = gH.value; document.getElementById("ogS").textContent = gS.value;
+    document.getElementById("ogM").textContent = (gM.value > 0 ? "+" : "") + gM.value; document.getElementById("ogK").textContent = gK.value;
+    const steps = 48, bw = W/steps;
+    for (let i = 0; i < steps; i++){
+      const t = i/(steps-1), v = lift + t*(1-lift);
+      const wS = (1-t)**2, wH = t**2, wM = 4*t*(1-t);
+      const mc = m >= 0 ? WARM : COOL, ma = Math.abs(m);
+      const rgb = [0,1,2].map(c => { let x = v;
+        x += (TEAL[c]-.5)*wS*s*1.2; x += (ORANGE[c]-.5)*wH*h*1.2; x += (mc[c]-.5)*wM*ma*1.2;
+        return Math.round(255*Math.min(1,Math.max(0,x))); });
+      ctx.fillStyle = `rgb(${rgb})`; ctx.fillRect(Math.floor(i*bw), 0, Math.ceil(bw)+1, H*.62);
+      const g = Math.round(255*t); ctx.fillStyle = `rgb(${g},${g},${g})`; ctx.fillRect(Math.floor(i*bw), H*.66, Math.ceil(bw)+1, H*.34);
+    }
+  }
+  [gH,gS,gM,gK].forEach(i => i.addEventListener("input", drawRamp));
+
+  function all(){ drawHisto(); drawCurve(); updateLab(); drawRamp(); }
+  all();
+  if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", all);
+  new MutationObserver(all).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
+})();
+</script>
+<script>
+/* Screenshot slots: one per timestamp tag. Images are artifact assets, indexed in db "shots/<slot>". */
+(function(){
+  const slots = {};               // slotId -> elements + local preview url
+  const current = {};             // slotId -> asset id stored in db
+  let mode = "local";             // "local" | "remote" (can upload) | "readonly"
+  let db = null, assets = null, activeSlot = null;
+  const fileInput = document.getElementById("shotFile");
+  const OK_TYPES = /^image\/(png|jpeg|webp|gif)$/;
+
+  function build(a){
+    const t = parseInt(new URL(a.href).searchParams.get("t"), 10);
+    const id = "shot-" + t;
+    const box = document.createElement("div");
+    box.className = "shot"; box.dataset.slot = id;
+    box.innerHTML =
+      '<button type="button" class="shot-pick">' +
+        '<img alt="" hidden>' +
+        '<span class="shot-empty"><b></b><small></small></span>' +
+        '<span class="shot-hint">點擊更換截圖</span>' +
+      '</button>' +
+      '<button type="button" class="shot-del" hidden>移除</button>' +
+      '<span class="shot-status" hidden></span>';
+    const s = { box, pick: box.querySelector(".shot-pick"), img: box.querySelector("img"),
+      empty: box.querySelector(".shot-empty"), del: box.querySelector(".shot-del"),
+      status: box.querySelector(".shot-status"), label: a.textContent, local: null };
+    s.pick.setAttribute("aria-label", "影片 " + s.label + " 的截圖，點擊選擇圖檔");
+    s.img.alt = "影片 " + s.label + " 截圖";
+    s.img.addEventListener("error", () => { if (!s.local) showImage(id, null); });
+    s.pick.addEventListener("click", () => { if (s.pick.disabled) return; activeSlot = id; fileInput.value = ""; fileInput.click(); });
+    s.del.addEventListener("click", () => removeShot(id));
+    box.addEventListener("dragover", e => { if (s.pick.disabled) return; e.preventDefault(); box.classList.add("drag"); });
+    box.addEventListener("dragleave", () => box.classList.remove("drag"));
+    box.addEventListener("drop", e => { box.classList.remove("drag"); if (s.pick.disabled) return; e.preventDefault();
+      const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) handleFile(id, f); });
+    slots[id] = s;
+    return box;
+  }
+
+  document.querySelectorAll(".trait > .ts").forEach(a => a.before(build(a)));
+  document.querySelectorAll(".step-title > .ts").forEach(a => a.closest(".step-title").after(build(a)));
+
+  function setStatus(id, text, isErr){
+    const s = slots[id]; s.status.hidden = !text; s.status.textContent = text || ""; s.status.classList.toggle("err", !!isErr);
+  }
+  function showImage(id, src){
+    const s = slots[id]; if (!s) return;
+    s.img.hidden = !src; s.empty.hidden = !!src;
+    if (src) s.img.src = src; else s.img.removeAttribute("src");
+    s.box.classList.toggle("has-img", !!src);
+    s.del.hidden = !src || mode === "readonly";
+    s.del.classList.remove("confirm"); s.del.textContent = "移除";
+  }
+  function applyMode(){
+    const ro = mode === "readonly";
+    for (const id in slots){
+      const s = slots[id];
+      s.pick.disabled = ro;
+      s.empty.querySelector("b").textContent = ro ? "尚無截圖" : "加入截圖";
+      s.empty.querySelector("small").textContent = "影片 " + s.label + (ro ? "" : " · 點擊或拖曳圖檔");
+      s.del.hidden = ro || !s.box.classList.contains("has-img");
+    }
+  }
+  applyMode();
+
+  fileInput.addEventListener("change", () => {
+    const f = fileInput.files && fileInput.files[0];
+    if (f && activeSlot) handleFile(activeSlot, f);
+  });
+
+  const errText = code => ({
+    too_large: "檔案太大，上限 20 MB。",
+    unsupported_type: "只支援 PNG、JPG、WebP、GIF。",
+    quota_or_state: "這個頁面的儲存空間已滿。",
+    rate_limited: "操作太頻繁，請稍後再試。",
+    upstream_auth: "登入狀態失效，請重新整理頁面。",
+    not_granted: "你沒有這個頁面的編輯權限。"
+  }[code] || "上傳失敗，請再試一次。");
+
+  async function handleFile(id, file){
+    const s = slots[id];
+    if (!OK_TYPES.test(file.type)) { setStatus(id, "只支援 PNG、JPG、WebP、GIF。", true); return; }
+    if (mode !== "remote"){
+      if (s.local) URL.revokeObjectURL(s.local);
+      s.local = URL.createObjectURL(file);
+      showImage(id, s.local);
+      setStatus(id, "只在這次瀏覽中顯示，重新整理後會消失。");
+      return;
+    }
+    setStatus(id, "上傳中…");
+    try {
+      const prev = current[id];
+      const r = await assets.upload(file);
+      await db.doc("shots/" + id).set({ asset: r.id, name: file.name.slice(0, 120), updatedAt: Date.now() });
+      current[id] = r.id;
+      showImage(id, r.url);
+      setStatus(id, "");
+      if (prev && prev !== r.id) assets.delete(prev).catch(() => {});
+    } catch (e) {
+      setStatus(id, errText(e && e.code), true);
+    }
+  }
+
+  async function removeShot(id){
+    const s = slots[id];
+    if (!s.del.classList.contains("confirm")){
+      s.del.classList.add("confirm"); s.del.textContent = "確定移除？";
+      setTimeout(() => { s.del.classList.remove("confirm"); s.del.textContent = "移除"; }, 3000);
+      return;
+    }
+    if (mode !== "remote"){
+      if (s.local) URL.revokeObjectURL(s.local);
+      s.local = null; showImage(id, null); setStatus(id, ""); return;
+    }
+    const prev = current[id];
+    try {
+      await db.doc("shots/" + id).delete();
+      delete current[id]; showImage(id, null); setStatus(id, "");
+      if (prev) assets.delete(prev).catch(() => {});
+    } catch (e) { setStatus(id, "移除失敗，請再試一次。", true); }
+  }
+
+  /* standalone hosting: screenshots/shot-<seconds>.(jpg|png|webp) */
+  function loadStaticShots(){
+    for (const id in slots){
+      const probe = new Image(), exts = ["jpg", "png", "webp"]; let k = 0;
+      const next = () => { if (k < exts.length) probe.src = "screenshots/" + id + "." + exts[k++]; };
+      probe.onload = () => { if (!slots[id].local) showImage(id, probe.src); };
+      probe.onerror = next; next();
+    }
+  }
+  async function connect(){
+    if (!window.claude || typeof window.claude.use !== "function"){ loadStaticShots(); return; }
+    try { [db, assets] = await Promise.all([claude.use("db"), claude.use("assets")]); } catch (e) { return; }
+    if (!db) return;   // no store in this view: keep local previews
+    mode = assets ? "remote" : "readonly";
+    applyMode();
+    db.collection("shots").onSnapshot(snap => {
+      const seen = new Set();
+      snap.docs.forEach(d => {
+        const data = d.data();
+        if (!slots[d.id] || !data || typeof data.asset !== "string") return;
+        seen.add(d.id);
+        if (current[d.id] !== data.asset || !slots[d.id].img.getAttribute("src")){
+          current[d.id] = data.asset; showImage(d.id, "/_blob/" + data.asset);
+        }
+      });
+      for (const id in slots) if (!seen.has(id) && current[id]) { delete current[id]; showImage(id, null); }
+      applyMode();
+    }, () => {});
+  }
+  connect();
+})();
+</script>
+
+</body>
+</html>
