@@ -76,6 +76,10 @@ lab/index.html             調色實驗器
 lab/vendor/libraw/         LibRaw WebAssembly 解碼器與授權條款
 ```
 
+## 授權
+
+本專案自己撰寫的程式碼以 [MIT 授權](LICENSE) 釋出。以下第三方元件依各自的授權條款；原影片內容與 SamAlive 的作品權利屬於原作者，不在 MIT 授權範圍內。
+
 ## 第三方元件
 
 - **libraw-wasm-nothread** 1.6.0-nothread.1（ISC 授權）：`lab/vendor/libraw/worker.js`、`libraw.wasm`，取自 npm 套件。授權見 `LICENSE-libraw-wasm-nothread.txt`。
